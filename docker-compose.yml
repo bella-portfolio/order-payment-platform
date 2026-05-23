@@ -1,0 +1,57 @@
+version: "3.9"
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: order-platform-kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      # KRaft mode (no Zookeeper)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Listeners
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Auto-create topics
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  order-db:
+    image: postgres:16
+    container_name: order-platform-order-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: orderuser
+      POSTGRES_PASSWORD: orderpass
+      POSTGRES_DB: orderdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orderuser -d orderdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  payment-db:
+    image: postgres:16
+    container_name: order-platform-payment-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: paymentuser
+      POSTGRES_PASSWORD: paymentpass
+      POSTGRES_DB: paymentdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paymentuser -d paymentdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
